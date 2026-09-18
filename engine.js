@@ -1,6 +1,6 @@
 // Catering One — shared engine: screen, palette, input, sound, text, shared sprites.
 (function () {
-  const W = 256, H = 224;
+  const W = 512, H = 448;   // fine pixel grid (2x the original 256 x 224)
   const canvas = document.getElementById('screen');
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
@@ -29,117 +29,65 @@
   function rect(x, y, w, h, c) { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); }
   function px(x, y, c) { rect(x, y, 1, 1, c); }
 
+  // Darken (f < 1) or lighten (f > 1) a #rrggbb color.
+  function tint(hex, f) {
+    const n = parseInt(hex.slice(1), 16);
+    const ch = function (v) { return Math.max(0, Math.min(255, Math.round(f < 1 ? v * f : v + (255 - v) * (f - 1)))); };
+    return '#' + [n >> 16, (n >> 8) & 255, n & 255].map(function (v) { return ch(v).toString(16).padStart(2, '0'); }).join('');
+  }
+
   const FONT = '"Press Start 2P", ui-monospace, Menlo, monospace';
   function text(str, x, y, c, opts) {
     opts = opts || {};
-    const size = opts.size || 8;
+    const size = opts.size || 16;
+    const off = Math.max(1, Math.round(size / 8));
     ctx.font = size + 'px ' + FONT;
     ctx.textBaseline = 'top';
     ctx.textAlign = opts.align || 'left';
     if (opts.shadow !== false) {
       ctx.fillStyle = opts.shadowColor || C.black;
-      ctx.fillText(str, Math.round(x) + 1, Math.round(y) + 1);
+      ctx.fillText(str, Math.round(x) + off, Math.round(y) + off);
     }
     ctx.fillStyle = c || C.white;
     ctx.fillText(str, Math.round(x), Math.round(y));
   }
 
-  // Speech bubble anchored at (x, y) = the speaker's head top.
+  // Speech bubble whose tail points at (x, y), the speaker's head top.
   function bubble(str, x, y) {
-    ctx.font = '8px ' + FONT;
-    const w = Math.ceil(ctx.measureText(str).width) + 8;
+    ctx.font = '16px ' + FONT;
+    const w = Math.ceil(ctx.measureText(str).width) + 16;
     let bx = Math.round(x - w / 2);
-    bx = Math.max(2, Math.min(W - w - 2, bx));
-    const by = Math.round(y - 18);
-    rect(bx - 1, by - 1, w + 2, 14, C.black);
-    rect(bx, by, w, 12, C.white);
-    rect(x - 1, by + 12, 3, 2, C.white);
-    px(x, by + 14, C.white);
-    text(str, bx + 4, by + 2, C.black, { shadow: false });
+    bx = Math.max(4, Math.min(W - w - 4, bx));
+    const by = Math.round(y - 38);
+    rect(bx - 2, by - 2, w + 4, 30, C.black);
+    rect(bx, by, w, 26, C.white);
+    rect(bx, by + 22, w, 4, C.shade);
+    rect(x - 4, by + 26, 8, 4, C.white); rect(x - 2, by + 30, 4, 3, C.white);
+    rect(x - 6, by + 26, 2, 4, C.black); rect(x + 4, by + 26, 2, 4, C.black);
+    text(str, bx + 8, by + 5, C.black, { shadow: false });
   }
 
-  // ---------- shared sprites ----------
-  // Side-view person, 5px wide x 11px tall; (x, y) = feet baseline, left edge.
-  // look: { suit, hair, skin, tie, item: 'camera'|'clipboard'|'wave'|'shades', dir: 1|-1 }
-  function person(x, y, look, frame) {
-    x = Math.round(x); y = Math.round(y);
-    const top = y - 11;
-    const dir = look.dir || 1;
-    // legs
-    const step = frame % 2;
-    const legC = look.pants || look.suit;
-    if (step === 0) { rect(x + 1, y - 3, 1, 3, legC); rect(x + 3, y - 3, 1, 3, legC); }
-    else { rect(x + 0, y - 3, 1, 3, legC); rect(x + 4, y - 3, 1, 3, legC); rect(x + 2, y - 3, 1, 1, legC); }
-    rect(x, y - 1, 2, 1, C.black); rect(x + 3, y - 1, 2, 1, C.black);
-    // body
-    rect(x, top + 4, 5, 5, look.suit);
-    rect(x + 2, top + 4, 1, 3, look.shirt || C.white);
-    if (look.tie) rect(x + 2, top + 5, 1, 2, look.tie);
-    // head
-    rect(x + 1, top, 3, 4, look.skin || C.skin);
-    rect(x + 1, top, 3, 1, look.hair);
-    px(dir > 0 ? x + 1 : x + 3, top + 1, look.hair);
-    if (look.item === 'shades') rect(dir > 0 ? x + 2 : x + 1, top + 1, 2, 1, C.black);
-    else px(dir > 0 ? x + 3 : x + 1, top + 1, C.black);
-    // arms / items
-    const hand = dir > 0 ? x + 5 : x - 1;
-    if (look.item === 'wave') {
-      rect(x + 5, top - 1, 1, 5, look.suit);
-      rect(x + 5, top - 3, 2, 2, look.skin || C.skin);
-    } else if (look.item === 'camera') {
-      rect(dir > 0 ? x + 4 : x - 2, top + 1, 3, 3, C.black);
-      px(dir > 0 ? x + 6 : x - 2, top + 2, C.metal);
-    } else if (look.item === 'clipboard') {
-      rect(hand - (dir > 0 ? 0 : 1), top + 5, 2, 3, C.brownLight);
-      px(hand, top + 6, C.white);
-    } else if (look.item === 'mic') {
-      rect(hand, top + 4, 1, 3, C.black);
-      rect(hand, top + 3, 1, 1, C.metal);
-    } else {
-      rect(hand - (dir > 0 ? 1 : -1), top + 5, 1, 3, look.suit);
-    }
-  }
-
-  // Side-view catering truck: cab on the right, scissor lift raising the box.
-  // (x, y) = ground contact, left edge. lift = pixels the box is raised above its rest.
-  function cateringTruckSide(x, y, lift, opts) {
-    opts = opts || {};
-    x = Math.round(x); y = Math.round(y); lift = Math.round(lift);
-    const chassisY = y - 9;
-    // wheels
-    [x + 5, x + 24, x + 42].forEach(function (wx) {
-      rect(wx, y - 5, 6, 5, C.rubber); px(wx + 2, y - 3, C.metal); px(wx + 3, y - 3, C.metal);
-    });
-    // chassis
-    rect(x, chassisY, 50, 4, C.shadeDark);
-    // cab
-    rect(x + 38, chassisY - 12, 13, 12, C.blue);
-    rect(x + 44, chassisY - 10, 6, 5, C.glass);
-    rect(x + 38, chassisY - 12, 13, 1, C.afNavy);
-    px(x + 50, chassisY - 2, C.yellow);
-    // scissor lift
-    const boxBottom = chassisY - 1 - lift;
-    if (lift > 1) {
-      const n = Math.max(1, Math.floor(lift / 6));
-      for (let i = 0; i < n; i++) {
-        const y0 = chassisY - (lift / n) * i, y1 = chassisY - (lift / n) * (i + 1);
-        line(x + 6, y0, x + 30, y1, C.metal);
-        line(x + 30, y0, x + 6, y1, C.metal);
+  // Pixel-map sprites: rows of characters looked up in a palette ('.' = clear).
+  // Each (map, palette, flip) combination is rendered once to an offscreen canvas.
+  const sprCache = new Map();
+  function sprCanvas(rows, pal, flip) {
+    const key = rows.join('/') + '|' + Object.keys(pal).map(function (k) { return k + pal[k]; }).join(',') + (flip ? '|f' : '');
+    let cv = sprCache.get(key);
+    if (cv) return cv;
+    const w = rows.reduce(function (m, r) { return Math.max(m, r.length); }, 0);
+    cv = document.createElement('canvas'); cv.width = w; cv.height = rows.length;
+    const c2 = cv.getContext('2d');
+    rows.forEach(function (row, y) {
+      for (let x = 0; x < row.length; x++) {
+        const col = pal[row[x]];
+        if (!col) continue;
+        c2.fillStyle = col; c2.fillRect(flip ? w - 1 - x : x, y, 1, 1);
       }
-    }
-    // box
-    const bx = x - 2, bw = 38, bh = 22;
-    rect(bx, boxBottom - bh, bw, bh, C.white);
-    rect(bx, boxBottom - bh, bw, 1, C.shade);
-    rect(bx, boxBottom - 1, bw, 1, C.shadeDark);
-    rect(bx, boxBottom - 9, bw, 3, C.red);
-    text('C1', bx + 12, boxBottom - 19, C.redDark, { size: 8, shadow: false });
-    if (opts.doorOpen) rect(bx, boxBottom - 18, 3, 17, C.black);
-    // platform lip toward the plane
-    if (lift > 10) rect(bx - 6, boxBottom - 1, 6, 2, C.metal);
-    if (opts.driver) { rect(x + 45, chassisY - 10, 3, 3, C.skin); rect(x + 45, chassisY - 10, 3, 1, C.hairGray); }
-    return boxBottom;
+    });
+    sprCache.set(key, cv);
+    return cv;
   }
+  function spr(rows, pal, x, y, flip) { ctx.drawImage(sprCanvas(rows, pal, flip), Math.round(x), Math.round(y)); }
 
   function line(x0, y0, x1, y1, c) {
     x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
@@ -252,7 +200,7 @@
     const helpH = 40;
     const availW = window.innerWidth - 32 - 20;
     const availH = window.innerHeight - 24 - 20 - padH - helpH;
-    const s = Math.max(0.5, Math.min(availW / W, availH / H, 5));
+    const s = Math.max(0.25, Math.min(availW / W, availH / H, 2.5));
     canvas.style.width = Math.floor(W * s) + 'px';
     canvas.style.height = Math.floor(H * s) + 'px';
     // Back the canvas at the screen's real pixel density so text and edges stay sharp;
@@ -270,7 +218,7 @@
 
   window.C1 = {
     W: W, H: H, ctx: ctx, C: C, rect: rect, px: px, line: line, text: text, bubble: bubble,
-    person: person, cateringTruckSide: cateringTruckSide,
+    tint: tint, spr: spr, sprCanvas: sprCanvas,
     keys: keys, takeAction: takeAction, Sound: Sound,
     loadHighScore: loadHighScore, saveHighScore: saveHighScore, FONT: FONT
   };
