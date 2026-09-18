@@ -252,10 +252,15 @@
     const helpH = 40;
     const availW = window.innerWidth - 32 - 20;
     const availH = window.innerHeight - 24 - 20 - padH - helpH;
-    let s = Math.min(availW / W, availH / H);
-    s = s >= 1 ? Math.floor(s * 2) / 2 : Math.max(0.5, s);
-    canvas.style.width = (W * s) + 'px';
-    canvas.style.height = (H * s) + 'px';
+    const s = Math.max(0.5, Math.min(availW / W, availH / H, 5));
+    canvas.style.width = Math.floor(W * s) + 'px';
+    canvas.style.height = Math.floor(H * s) + 'px';
+    // Back the canvas at the screen's real pixel density so text and edges stay sharp;
+    // all drawing still happens on the 256 x 224 logical grid.
+    const k = Math.max(1, Math.ceil(s * (window.devicePixelRatio || 1)));
+    if (canvas.width !== W * k) { canvas.width = W * k; canvas.height = H * k; }
+    ctx.setTransform(k, 0, 0, k, 0, 0);
+    ctx.imageSmoothingEnabled = false;
   }
   window.addEventListener('resize', fit);
   fit();
