@@ -1,0 +1,101 @@
+<title>Catering One</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+<style>
+  /* Deliberately single-theme: a CRT arcade cabinet on a dark ground. */
+  :root {
+    --ground: #14121c;
+    --bezel: #24202f;
+    --bezel-edge: #3a3350;
+    --ink: #f4efe1;
+    --dim: #8f88a8;
+    --accent: #f2c230;
+  }
+  html, body { height: 100%; }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Press Start 2P", ui-monospace, Menlo, monospace;
+    padding-inline: 16px;
+    padding-block: 12px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    overflow: hidden;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+  }
+  .cabinet {
+    background: var(--bezel);
+    border: 2px solid var(--bezel-edge);
+    padding: 8px;
+    box-shadow: 0 0 0 4px #0c0b11, 0 18px 40px rgba(0,0,0,.6);
+    max-width: 100%;
+    line-height: 0;
+  }
+  canvas {
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    max-width: 100%;
+    background: #000;
+  }
+  .help {
+    font-size: 8px;
+    line-height: 1.8;
+    color: var(--dim);
+    text-align: center;
+    letter-spacing: .05em;
+    max-width: 60ch;
+  }
+  .help b { color: var(--accent); font-weight: normal; }
+  .pad {
+    display: none;
+    gap: 10px;
+    width: 100%;
+    max-width: 520px;
+    justify-content: space-between;
+  }
+  .pad .grp { display: flex; gap: 10px; }
+  .pad button {
+    font: inherit;
+    font-size: 12px;
+    color: var(--ink);
+    background: var(--bezel);
+    border: 2px solid var(--bezel-edge);
+    border-bottom-width: 5px;
+    width: 64px;
+    height: 56px;
+    touch-action: none;
+  }
+  .pad button.on { background: var(--bezel-edge); border-bottom-width: 2px; }
+  .pad button:focus-visible, .cabinet:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (pointer: coarse) {
+    .pad { display: flex; }
+    .help.keys { display: none; }
+  }
+</style>
+
+<div class="cabinet" id="cabinet" tabindex="0" aria-label="Catering One game screen">
+  <canvas id="screen" width="256" height="224"></canvas>
+</div>
+<div class="pad" id="pad">
+  <div class="grp">
+    <button id="btn-left" data-key="left" aria-label="Steer left">&#9664;</button>
+    <button id="btn-right" data-key="right" aria-label="Steer right">&#9654;</button>
+  </div>
+  <div class="grp">
+    <button id="btn-brake" data-key="down" aria-label="Brake">B</button>
+    <button id="btn-gas" data-key="up" aria-label="Accelerate">A</button>
+  </div>
+</div>
+<p class="help keys"><b>&larr; &rarr;</b> steer &nbsp; <b>&uarr;</b> gas &nbsp; <b>&darr;</b> brake &nbsp; <b>SPACE</b> skip / start &nbsp; <b>M</b> mute</p>
+
+<script src="engine.js"></script>
+<script src="intro.js"></script>
+<script src="game.js"></script>
